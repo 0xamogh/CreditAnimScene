@@ -9,7 +9,7 @@ import {runTiming, bInterpolate} from "react-native-redash";
 interface CardSelectionProps {
   cards: [CardModel, CardModel, CardModel];
 }
-const { Clock,block,cond,eq,Value, useCode,multiply,concat,set } = Animated;
+const { Clock,block,cond,eq,Value, useCode,multiply,concat,set,not,and,clockRunning,neq } = Animated;
 const INITIAL_INDEX: number = -1;
 const timing = (animation: Animated.Value<number>, clock: Animated.Clock) =>
   set(animation, runTiming(clock, 0, { toValue:1, duration: 400, easing : Easing.linear }));
@@ -20,12 +20,32 @@ export default ({ cards }: CardSelectionProps) => {
   const clock = new Clock();
   const animation = new Value(0);
   const translateX = new Value(CARD_WIDTH); 
+  const isGroupingANimationDone = new Value(0);
+  const selectCard = (index: number)=>selectCard.setValue(index);
   useCode(
-    block([cond(eq(selectedCard, INITIAL_INDEX), [
-      timing(animation, clock)]),
+    block([
+      cond(eq(selectedCard, INITIAL_INDEX), [
+      timing(animation, clock),
       set(cardRotation[2],bInterpolate(animation,0,-15)),
       set(cardRotation[0],bInterpolate(animation,0,15))
     ]),
+    cond(
+      and(neq(selectedCard,INITIAL_INDEX),not(isGroupingANimationDone)),
+     [ 
+       timing(animation, clock),
+      set(translateX, bInterpolate(animation,translateX,0))  ,
+      set(
+        cardRotation[0],
+        bInterpolate(animation,cardRotation[0],-15/2)),
+      set(
+        cardRotation[1], 
+        bInterpolate(animation,cardRotation[1],15/2)
+        ),
+      cond(not(clockRunning(clock)),set(isGroupingANimationDone,1))
+      ]
+    )
+     
+  ]),
     [cards]
   );
   return (
