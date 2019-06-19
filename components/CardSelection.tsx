@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useState,useMemo,useRef } from "react";
 import { View, Text, StyleSheet, SafeAreaView } from "react-native";
 import { RectButton } from "react-native-gesture-handler";
-import Animated, {Easing} from "react-native-reanimated";
+import Animated, {Transition,Transitioning,Easing} from "react-native-reanimated";
 import Card, { Card as CardModel, CARD_WIDTH, CARD_HEIGHT } from "./Card";
 import CheckIcon from "./CheckIcon";
 import Thumbnail from "./Thumbnail";
@@ -16,16 +16,27 @@ const timing = (animation: Animated.Value<number>, clock: Animated.Clock) =>
   set(animation, runTiming(clock, 0, { toValue:1, duration: 400, easing : Easing.linear }));
 
 export default ({ cards }: CardSelectionProps) => {
-  const selectedCard = new Value(INITIAL_INDEX);
-  const cardRotation = cards.map(() => new Value(0));
-  const cardZind  = cards.map(() => new Value(0));
-  const clock = new Clock();
-  const animation = new Value(0);
-  const translateX = new Value(CARD_WIDTH);
-  const cardTranslations  = cards.map(() => new Value(0));
-  const isGroupingANimationDone = new Value(0);
-  const selectCard = (index: number)=> selectedCard.setValue(index);
-  const shouldUpdateZ =new Value(1);
+  const container = useRef();
+  const [selectedCardState, setSelectedCardState] = useState(INITIAL_INDEX);
+  const {selectedCard,shouldUpdateZ,cardRotation,cardTranslations,cardZind,clock,isGroupingANimationDone,translateX,animation} = useMemo(
+    () => ({
+       selectedCard : new Value(INITIAL_INDEX),
+       cardTranslations:cards.map(() => new Value(0)),
+       cardRotation : cards.map(() => new Value(0)),
+       cardZind  : cards.map(() => new Value(0)),
+       clock : new Clock(),
+       animation : new Value(0),
+       translateX : new Value(CARD_WIDTH),
+       isGroupingANimationDone : new Value(0),
+       shouldUpdateZ: new Value(1)
+    }),
+    [cards]
+  )
+  const selectCard = (index: number)=>{
+    container.current.animateNextTransition();
+  setSelectedCardState(index);
+  selectedCard.setValue(index);
+}
   useCode(
     block([
       cond(eq(selectedCard, INITIAL_INDEX), [
@@ -84,48 +95,49 @@ export default ({ cards }: CardSelectionProps) => {
     [cards]
   );
   return (
-    <View style={styles.container}>
-    <View style={styles.cards}>
-        {cards.map((card, index) => {
-          const translateY = cardTranslations[index];
-          const elevation = cardZind[index];
-          const zIndex = elevation;
-          const rotateZ = concat(cardRotation[index],"deg");
-          return (
-            <Animated.View
-              key={card.id}
-              style={{
-                ...StyleSheet.absoluteFillObject,
-                zIndex,
-                elevation,
-                transform : [
-                  { translateX:multiply(translateX,-1)},
-                  {rotateZ},
-                  {translateX },
-                  {translateY}
-                ]
-              }}
-            >
-              <Card key={card.id} {...{ card }} />
+    <Transitioning.View ref ={container} transition={<Transition.Out interpolation="easeInOut" type="fade" durationMs={700}/>} style={styles.container}>
+      <View style={styles.cards}>
+          {cards.map((card, index) => {
+            const translateY = cardTranslations[index];
+            const elevation = cardZind[index];
+            const zIndex = elevation;
+            const rotateZ = concat(cardRotation[index],"deg");
+            return (
+              <Animated.View
+                key={card.id}
+                style={{
+                  ...StyleSheet.absoluteFillObject,
+                  zIndex,
+                  elevation,
+                  transform : [
+                    { translateX:multiply(translateX,-1)},
+                    {rotateZ},
+                    {translateX },
+                    {translateY}
+                  ]
+                }}
+              >
+                <Card key={card.id} {...{ card }} />
 
-            </Animated.View>
-          );
-        })}
-      </View>
-      <SafeAreaView>
-        {cards.map(({ id, name, color, thumbnail }, index) => (
-          <RectButton key={id} onPress={() => selectCard(index)}>
-            <View style={styles.button} accessible>
-              <Thumbnail {...{ thumbnail }} />
-              <View style={styles.label}>
-                <Text>{name}</Text>
+              </Animated.View>
+            );
+          })}
+        </View>
+        <SafeAreaView>
+          {cards.map(({ id, name, color, thumbnail }, index) => (
+            <RectButton key={id} onPress={() => selectCard(index)}>
+              <View style={styles.button} accessible>
+                <Thumbnail {...{ thumbnail }} />
+                <View style={styles.label}>
+                  <Text>{name}</Text>
+                </View>
+                {selectedCardState === index && <CheckIcon {...{ color }} />}
+
               </View>
-              <CheckIcon {...{ color }} />
-            </View>
-          </RectButton>
-        ))}
-      </SafeAreaView>
-    </View>
+            </RectButton>
+          ))}
+        </SafeAreaView>
+    </Transitioning.View>
   );
 };
 
