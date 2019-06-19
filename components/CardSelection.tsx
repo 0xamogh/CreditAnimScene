@@ -19,9 +19,9 @@ export default ({ cards }: CardSelectionProps) => {
   const cardRotation = cards.map(() => new Value(0));
   const clock = new Clock();
   const animation = new Value(0);
-  const translateX = new Value(CARD_WIDTH); 
+  const translateX = new Value(CARD_WIDTH);
   const isGroupingANimationDone = new Value(0);
-  const selectCard = (index: number)=>selectCard.setValue(index);
+  const selectCard = (index: number)=> selectedCard.setValue(index);
   useCode(
     block([
       cond(eq(selectedCard, INITIAL_INDEX), [
@@ -31,20 +31,24 @@ export default ({ cards }: CardSelectionProps) => {
     ]),
     cond(
       and(neq(selectedCard,INITIAL_INDEX),not(isGroupingANimationDone)),
-     [ 
+     [
        timing(animation, clock),
       set(translateX, bInterpolate(animation,translateX,0))  ,
       set(
         cardRotation[0],
         bInterpolate(animation,cardRotation[0],-15/2)),
       set(
-        cardRotation[1], 
+        cardRotation[1],
         bInterpolate(animation,cardRotation[1],15/2)
+        ),
+      set(
+        cardRotation[2],
+        bInterpolate(animation,cardRotation[2],0)
         ),
       cond(not(clockRunning(clock)),set(isGroupingANimationDone,1))
       ]
     )
-     
+
   ]),
     [cards]
   );
@@ -66,7 +70,7 @@ export default ({ cards }: CardSelectionProps) => {
               }}
             >
               <Card key={card.id} {...{ card }} />
-            
+
             </Animated.View>
           );
         })}
